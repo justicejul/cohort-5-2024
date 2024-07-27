@@ -10,23 +10,36 @@ contract StudentRegistry {
         uint8 age;
     }
 
+    address public owner;
 
-    address public  owner;
-
-
-    constructor () {
+    constructor() {
         owner = msg.sender;
     }
 
     //dynamic array of students
     Student[] private students;
 
+    mapping(address => Student) public studentsMapping;
+
+    modifier onlyOwner () {
+        require( owner == msg.sender, "You fraud!!!");
+        _;
+    }
+
+    modifier isNotAddressZero () {
+        require(msg.sender != address(0), "Invalid Address");
+        _;
+    }
+
     function addStudent(
         address _studentAddr,
         string memory _name,
         uint8 _age
-    ) public {
-        require(owner == msg.sender, "You are not authorized");
+    ) public onlyOwner isNotAddressZero {
+
+        require( bytes(_name).length > 0, "Name cannot be blank");
+        require( _age >= 18, "This student is under age");
+
         uint256 _studentId = students.length + 1;
         Student memory student = Student({
             studentAddr: _studentAddr,
@@ -36,12 +49,41 @@ contract StudentRegistry {
         });
 
         students.push(student);
+        // add student to studentsMapping
+        studentsMapping[_studentAddr] = student;
     }
 
-    function getStudent(uint8 _studentId) public view returns (Student memory) {
+    function getStudent(uint8 _studentId) public isNotAddressZero view returns (Student memory) {
         return students[_studentId - 1];
     }
 
 
 
+    function getStudentFromMapping(address _studentAddr)
+        public
+        isNotAddressZero
+        view
+        returns (Student memory)
+    {
+        return studentsMapping[_studentAddr];
+    }
+
+
+
+    function deleteStudent(address _studentAddr) public onlyOwner  isNotAddressZero{
+
+        require(studentsMapping[_studentAddr].studentAddr != address(0), "Student does not exist");
+
+        // delete studentsMapping[_studentAddr];
+
+        Student memory student = Student({
+            studentAddr: address(0),
+            name: "",
+            age: 0,
+            studentId: 0
+        });
+
+        studentsMapping[_studentAddr] = student;
+
+    }
 }
