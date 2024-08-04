@@ -1,32 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
+import "./Ownable.sol";
+import "./Student.sol";
 
-contract StudentRegistry {
+
+contract StudentRegistry is Ownable {
+    //custom erros
+    error NameIsEmpty();
+    error UnderAge(uint8 age, uint8 expectedAge);
+
     //custom data type
-    struct Student {
-        address studentAddr;
-        string name;
-        uint256 studentId;
-        uint8 age;
-    }
-
-    address public owner;
-
-    constructor() {
-        owner = msg.sender;
-    }
-
+   
+  
     //dynamic array of students
     Student[] private students;
 
     mapping(address => Student) public studentsMapping;
 
-    modifier onlyOwner () {
-        require( owner == msg.sender, "You fraud!!!");
-        _;
-    }
 
-    modifier isNotAddressZero () {
+    modifier isNotAddressZero() {
         require(msg.sender != address(0), "Invalid Address");
         _;
     }
@@ -35,10 +27,14 @@ contract StudentRegistry {
         address _studentAddr,
         string memory _name,
         uint8 _age
-    ) public onlyOwner isNotAddressZero {
+    ) public  isNotAddressZero {
+        if (bytes(_name).length == 0) {
+            revert NameIsEmpty();
+        }
 
-        require( bytes(_name).length > 0, "Name cannot be blank");
-        require( _age >= 18, "This student is under age");
+        if (_age < 18) {
+            revert UnderAge({age: _age, expectedAge: 18});
+        }
 
         uint256 _studentId = students.length + 1;
         Student memory student = Student({
@@ -53,26 +49,33 @@ contract StudentRegistry {
         studentsMapping[_studentAddr] = student;
     }
 
-    function getStudent(uint8 _studentId) public isNotAddressZero view returns (Student memory) {
+    function getStudent(uint8 _studentId)
+        public
+        view
+        isNotAddressZero
+        returns (Student memory)
+    {
         return students[_studentId - 1];
     }
 
-
-
     function getStudentFromMapping(address _studentAddr)
         public
-        isNotAddressZero
         view
+        isNotAddressZero
         returns (Student memory)
     {
         return studentsMapping[_studentAddr];
     }
 
-
-
-    function deleteStudent(address _studentAddr) public onlyOwner  isNotAddressZero{
-
-        require(studentsMapping[_studentAddr].studentAddr != address(0), "Student does not exist");
+    function deleteStudent(address _studentAddr)
+        public
+        onlyOwner
+        isNotAddressZero
+    {
+        require(
+            studentsMapping[_studentAddr].studentAddr != address(0),
+            "Student does not exist"
+        );
 
         // delete studentsMapping[_studentAddr];
 
@@ -84,6 +87,10 @@ contract StudentRegistry {
         });
 
         studentsMapping[_studentAddr] = student;
+    }
 
+
+    function modifyOwner(address _newOwner) public {
+        changeOwner(_newOwner);
     }
 }
